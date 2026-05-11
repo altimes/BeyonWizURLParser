@@ -61,11 +61,13 @@ public struct BeyonWizURLParser: Sendable {
         guard let components = URLComponents(string: urlString) else {
             throw BeyonWizURLParserError.invalidURL
         }
-        
-        let pathComponents = components.path
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .map(String.init)
-        
+      
+      guard let url = URL(string: urlString) else {
+        throw BeyonWizURLParserError.invalidURL
+      }
+      let pathComponents = url.pathComponents
+        .filter { $0 != "/" }
+                
         let (fileNameParts, episodeInfo) =
             Self.parseFile(from: pathComponents.last)
         
