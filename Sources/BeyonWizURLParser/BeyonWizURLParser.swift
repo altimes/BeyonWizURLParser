@@ -9,6 +9,14 @@
 import Foundation
 import RegexBuilder
 
+
+public struct RecordingMetadata: Sendable, Equatable, Hashable {
+    public let dateTime: Date?
+    public let channelName: String?
+    public let programName: String
+    public let episodeInfo: EpisodeInfo?
+}
+
 // MARK: - EpisodeInfo
 
 /// Episode metadata parsed from a file name component, such as `S01E02`.
@@ -36,8 +44,7 @@ public struct ParsedURL: Sendable, Equatable, Hashable {
     public let host: String?
     public let port: Int?
     public let pathComponents: [String]
-    public let fileNameParts: [String]?
-    public let episodeInfo: EpisodeInfo?
+    public let recording: RecordingMetadata?
     public let queryItems: [String: String]
     public let fragment: String?
 }
@@ -68,8 +75,7 @@ public struct BeyonWizURLParser: Sendable {
       let pathComponents = url.pathComponents
         .filter { $0 != "/" }
                 
-        let (fileNameParts, episodeInfo) =
-            Self.parseFile(from: pathComponents.last)
+        let recording = Self.parseFile(from: pathComponents.last)
         
         let queryItems = Dictionary(
             uniqueKeysWithValues: components.queryItems?.map {
@@ -84,8 +90,7 @@ public struct BeyonWizURLParser: Sendable {
             host: components.host,
             port: components.port,
             pathComponents: pathComponents,
-            fileNameParts: fileNameParts,
-            episodeInfo: episodeInfo,
+            recording: recording,
             queryItems: queryItems,
             fragment: components.fragment
         )
@@ -107,45 +112,64 @@ private extension BeyonWizURLParser {
     /// - Parameter lastPathComponent: The final URL path component, or `nil` when the URL has no path component.
     /// - Returns: A tuple containing the parsed file-name parts and episode metadata. Both values are `nil`
     ///   when `lastPathComponent` is `nil` or does not contain an extension separator.
-    static func parseFile(from lastPathComponent: String?) -> ([String]?, EpisodeInfo?) {
+    static func parseFile(from lastPathComponent: String?) -> RecordingMetadata? {
         
         guard let last = lastPathComponent,
               last.contains("."),
               let dotIndex = last.lastIndex(of: ".")
         else {
-            return (nil, nil)
+            return nil
         }
         
         let fileNameWithoutExtension = String(last[..<dotIndex])
         
-        let parts = fileNameWithoutExtension
+        var parts = fileNameWithoutExtension
             .split(separator: "-")
             .map {
                 $0.trimmingCharacters(in: .whitespacesAndNewlines)
             }
             .filter { !$0.isEmpty }
-        
-        let episodeInfo = parseEpisodeIfPresent(from: parts)
-        
-        return (parts, episodeInfo)
+      
+
+      guard !parts.isEmpty else { return nil }
+
+      // 1️⃣ Detect episode (must be last if present)
+      var episodeInfo: EpisodeInfo? = nil
+      if let lastPart = parts.last,
+         let episode = parseEpisode(from: lastPart) {
+          episodeInfo = episode
+          parts.removeLast()
+      }
+
+      // 2️⃣ Detect date/time (must be first if present)
+
+      var dateTime: Date? = nil
+      if let firstPart = parts.first,
+         let parsedDate = parseDateTime(from: firstPart) {
+          dateTime = parsedDate
+          parts.removeFirst()
+      }
+
+      // 3️⃣ Detect channel (if 2 parts remain, first is channel)
+      var channelName: String? = nil
+      
+      if parts.count >= 2 {
+          channelName = parts.removeFirst()
+      }
+
+      // 4️⃣ Remaining is program name (mandatory)
+      guard let programName = parts.first else {
+          return nil
+      }
+      
+      return RecordingMetadata(
+          dateTime: dateTime,
+          channelName: channelName,
+          programName: programName,
+          episodeInfo: episodeInfo
+      )
     }
-    
-    /// Parses episode metadata from the final file name part, when present.
-    ///
-    /// BeyonWiz file names are split into hyphen-separated parts before this method is called.
-    /// Only the last part is checked, because episode identifiers such as `S01E02` are expected
-    /// to appear at the end of the file name before the extension.
-    ///
-    /// - Parameter parts: The trimmed, non-empty parts of a file name without its extension.
-    /// - Returns: An `EpisodeInfo` value when the last part contains a valid episode identifier;
-    ///   otherwise, `nil`.
-    static func parseEpisodeIfPresent(from parts: [String]) -> EpisodeInfo? {
-        guard let lastPart = parts.last else {
-            return nil
-        }
-        return parseEpisode(from: lastPart)
-    }
-    
+        
     /// Parses a BeyonWiz episode identifier from a string.
     ///
     /// The string must consist only of an episode identifier in `SxxxxExx` format, where the
@@ -179,3 +203,22 @@ private extension BeyonWizURLParser {
         return EpisodeInfo(series: series, episode: episode)
     }
 }
+
+private extension BeyonWizURLParser {
+    
+    static func parseDateTime(from string: String) -> Date? {
+        
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_AU")
+        formatter.timeZone = TimeZone(identifier: "Australia/Sydney")
+        formatter.dateFormat = "yyyyMMdd HHmm"
+        
+        // Normalise multiple spaces between date and time
+        let normalised = string
+            .replacingOccurrences(of: #" +"#, with: " ", options: .regularExpression)
+        
+        let date =  formatter.date(from: normalised)
+        return date
+    }
+}
+
