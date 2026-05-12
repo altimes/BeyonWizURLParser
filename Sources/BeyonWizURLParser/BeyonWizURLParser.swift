@@ -12,7 +12,7 @@ import RegexBuilder
 // MARK: - EpisodeInfo
 
 /// Episode metadata parsed from a file name component, such as `S01E02`.
-public struct EpisodeInfo: Sendable, Equatable {
+public struct EpisodeInfo: Sendable, Equatable, Hashable {
     public let series: Int
     public let episode: Int
     
@@ -29,7 +29,7 @@ public struct EpisodeInfo: Sendable, Equatable {
 /// `ParsedURL` contains the standard URL components reported by `URLComponents`,
 /// along with BeyonWiz-specific file name information parsed from the final path
 /// component when it looks like a file name.
-public struct ParsedURL: Sendable, Equatable {
+public struct ParsedURL: Sendable, Equatable, Hashable {
     public let scheme: String?
     public let user: String?
     public let password: String?
