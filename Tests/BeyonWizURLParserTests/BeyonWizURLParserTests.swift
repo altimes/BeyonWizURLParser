@@ -63,4 +63,12 @@ final class BeyonWizURLParserTests: XCTestCase {
         ParsedURL(scheme: "https", user: nil, password: nil, host: "nas.local", port: nil, pathComponents: ["TV", "QI","QI - S2026E01.TS"], recording: RecordingMetadata(dateTime: nil, channelName: nil, programName: "QI", episodeInfo: EpisodeInfo(series: 2026, episode: 1)), queryItems: [:], fragment: nil)
                     )
   }
+  func testSeriesEpisodeDescription() throws {
+    XCTAssertEqual(
+      "S2026E01", "\(try! BeyonWizURLParser().parse("https://nas.local/TV/QI/ABC Entertains - QI - S2026E01.TS").recording!.episodeInfo!)"
+    )
+    XCTAssertEqual(
+      "S06E05", "\(try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.TS").recording!.episodeInfo!)"
+    )
+  }
 }

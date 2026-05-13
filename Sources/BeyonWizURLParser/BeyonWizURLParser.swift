@@ -20,7 +20,7 @@ public struct RecordingMetadata: Sendable, Equatable, Hashable {
 // MARK: - EpisodeInfo
 
 /// Episode metadata parsed from a file name component, such as `S01E02`.
-public struct EpisodeInfo: Sendable, Equatable, Hashable {
+public struct EpisodeInfo: Sendable, Equatable, Hashable, CustomStringConvertible {
     public let series: Int
     public let episode: Int
     
@@ -28,6 +28,13 @@ public struct EpisodeInfo: Sendable, Equatable, Hashable {
         self.series = series
         self.episode = episode
     }
+  
+  public var description: String {
+    let seriesString = series.formatted(.number.grouping(.never).precision(.integerLength(series > 99 ? 4 : 2)))
+    let episodeString = episode.formatted(.number.grouping(.never).precision(.integerLength(2)))
+    let result = "S\(seriesString)E\(episodeString)"
+    return result
+  }
 }
 
 // MARK: - ParsedURL
