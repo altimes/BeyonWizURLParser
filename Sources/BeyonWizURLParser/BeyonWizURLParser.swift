@@ -22,6 +22,7 @@ public struct RecordingMetadata: Sendable, Equatable, Hashable {
   public let channelName: String?
   public let programName: String
   public let episodeInfo: EpisodeInfo?
+  public let filenameWithoutSuffix: String
   public let filetype: RecordingFiletypes
 }
 
@@ -226,6 +227,7 @@ private extension BeyonWizURLParser {
       channelName: channelName,
       programName: programName,
       episodeInfo: episodeInfo,
+      filenameWithoutSuffix: fileNameWithoutExtension,
       filetype: fileExtension
     )
   }
