@@ -96,26 +96,27 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
   case srt  = "srt"
   case unknown = "unknown"
   
-  static func match(for fileName: String) -> RecordingFiletypes {
+  public static func match(for fileName: String) -> RecordingFiletypes {
     let result = RecordingFiletypes.allCases.filter { videoType in
       Self.isFileOfType(fileName: fileName, for: videoType)
     }
     return result.first ?? .unknown
   }
   
-  static func isFileOfType(fileName: String, for fileType: RecordingFiletypes) -> Bool {
+  public static func isFileOfType(fileName: String, for fileType: RecordingFiletypes) -> Bool {
     let pattern = Regex {
       "."
       fileType.rawValue.lowercased()
       Anchor.endOfLine
     }
     do {
-      if let match = try pattern.firstMatch(in: fileName.lowercased()) {
+//      if let match = try pattern.firstMatch(in: fileName.lowercased()) {
 //        print(fileType)
 //        print(String(fileName[match.range]))
-        return true
-      }
-      else { return false }
+//        return true
+        return try pattern.firstMatch(in: fileName.lowercased()) != nil
+//      }
+//      else { return false }
     }
     catch {
       // should log and better handle error....
