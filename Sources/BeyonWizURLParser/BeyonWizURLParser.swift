@@ -1,7 +1,10 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
-// Built using dialog with ChatGPT
+// Built by a combination dialog with ChatGPT and manual coding
+// Used ChatGPT to do the package setup and write the repetetive
+// framework coding given a syntactical description of the filename format.
+//
 // Consequently has some fields that BeyonWiz does not have (query, port, user, password etc..)
 // Left on the "you never know when you might encounter it, and it can do no harm" basis
 
@@ -18,11 +21,17 @@ import RegexBuilder
 /// information extracted from the final path component of a BeyonWiz URL, along
 /// with the required program name.
 public struct RecordingMetadata: Sendable, Equatable, Hashable {
+  /// Date of recording from YYYYMMDD HHMM component of filename if present
   public let dateTime: Date?
+  /// Name of channel that recording was made from
   public let channelName: String?
+  /// Name of program
   public let programName: String
+  /// Season episode Info as struct with Two Ints in it
   public let episodeInfo: EpisodeInfo?
+  /// Convenience property for that return the name without the suffix
   public let filenameWithoutSuffix: String
+  /// Type of the file .ts, .ts.cuts, .ap, ... see  ``RecordingFiletypes`` for details
   public let filetype: RecordingFiletypes
 }
 
@@ -30,7 +39,10 @@ public struct RecordingMetadata: Sendable, Equatable, Hashable {
 
 /// Episode metadata parsed from a file name component, such as `S01E02`.
 public struct EpisodeInfo: Sendable, Equatable, Hashable, CustomStringConvertible {
+  
+  /// Series number as determined by ICETV service may be seires number typically 1 or 2 digits or year of series as 4 digits
   public let series: Int
+  /// Episode number with series
   public let episode: Int
   
   public init(series: Int, episode: Int) {
@@ -39,7 +51,7 @@ public struct EpisodeInfo: Sendable, Equatable, Hashable, CustomStringConvertibl
   }
   
   /// CustomStringConvertible compliance
-  /// Generates SnnEnn or SnnnnEnn from episode and series values
+  /// Generates SnnEnn or SnnnnEnn from episode and series values eg 'S03E16' or 'S2025E06'
   public var description: String {
     let seriesString = series.formatted(.number.grouping(.never).precision(.integerLength(series > 99 ? 4 : 2)))
     let episodeString = episode.formatted(.number.grouping(.never).precision(.integerLength(2)))
@@ -87,15 +99,36 @@ public enum BeyonWizURLParserError: Error, Sendable {
 /// Use ``match(for:)`` to determine the recording file type from a complete file
 /// name. When no known suffix is found, matching returns  .unknown case..
 public enum RecordingFiletypes: String, Sendable, CaseIterable {
+  /// Transport Stream file
   case ts   = "ts"
+  /// Event Information Table extracted from Transport Stream
   case eit  = "eit"
+  /// BeyonWiz "cuts" file that contains information marking start, end and bookmarks
+  ///  - more info ...
   case cuts = "ts.cuts"
+  /// BeyonWiz meta data that identifies recording
+  ///  - more info ...
   case meta = "ts.meta"
+  /// BeyonWiz Access Poinst data to support fast playback by storing file offset of GOPs in "ts" file
+  ///  - more info ...
   case ap   = "ts.ap"
+  /// BeyonWiz "structure cache" file
+  ///  - more info ...
   case sc   = "ts.sc"
+  /// Subtitle file extracted from "ts" file using ccextractor
+  ///  - more info ...
   case srt  = "srt"
+  /// Default type for unmatched extension
   case unknown = "unknown"
   
+  /// Return the corresponding file type for the suffix of the given string.
+  ///
+  /// The component  that looks like a file name and containis an extension separator (`.`).
+  /// Checks the given file against all the enum entries and returns the first of the matches
+  /// Unless the enum is compromised it should only ever match a single entry.
+  ///
+  /// - Parameter fileName: Typically the full url.  Only requirement is that string has . suffix
+  /// - Returns: the matching enum entry if matches, else returns .unknown
   public static func match(for fileName: String) -> RecordingFiletypes {
     let result = RecordingFiletypes.allCases.filter { videoType in
       Self.isFileOfType(fileName: fileName, for: videoType)
@@ -103,6 +136,16 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
     return result.first ?? .unknown
   }
   
+  /// Returns whether a file name ends with the suffix for a specific recording file type.
+  ///
+  /// Matching is case-insensitive and checks the end of the supplied string for the
+  /// file type's raw value preceded by a period. For example, `.ts.meta` matches
+  /// ``RecordingFiletypes/meta``.
+  ///
+  /// - Parameters:
+  ///   - fileName: The file name or URL string to inspect.
+  ///   - fileType: The recording file type whose suffix should be matched.
+  /// - Returns: `true` when `fileName` ends with the suffix for `fileType`; otherwise, `false`.
   public static func isFileOfType(fileName: String, for fileType: RecordingFiletypes) -> Bool {
     let pattern = Regex {
       "."
@@ -110,13 +153,7 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
       Anchor.endOfLine
     }
     do {
-//      if let match = try pattern.firstMatch(in: fileName.lowercased()) {
-//        print(fileType)
-//        print(String(fileName[match.range]))
-//        return true
         return try pattern.firstMatch(in: fileName.lowercased()) != nil
-//      }
-//      else { return false }
     }
     catch {
       // should log and better handle error....
@@ -128,10 +165,39 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
 
 // MARK: - Parser
 
+
+/**
+ A text field driven  parser for BeyonWiz recording URLs.
+ 
+ Use `BeyonWizURLParser` to convert a BeyonWiz URL string into a structured
+ `ParsedURL` value containing standard URL components and, when present,
+ BeyonWiz recording metadata extracted from the final path component.
+ 
+ Example:
+ 
+ ```swift
+ let parser = BeyonWizURLParser()
+ let parsedURL = try parser.parse("http://beyonwiz.local/movie/example.ts")
+ ```
+ */
 public struct BeyonWizURLParser: Sendable {
   
   public init() {}
   
+  /**
+   Parses a BeyonWiz URL string into its structured URL and recording metadata components.
+   
+   The parser uses `URLComponents` for standard URL fields, such as the scheme,
+   host, query items, and fragment. It also inspects the final path component and,
+   when it matches a known BeyonWiz recording file type, extracts recording metadata
+   such as the date, channel name, program name, episode information, and file type.
+   
+   - Parameter urlString: The URL string to parse.
+   - Returns: A `ParsedURL` value containing the parsed URL components and any
+     recording metadata found in the final path component.
+   - Throws: `BeyonWizURLParserError.invalidURL` when `urlString` cannot be
+     interpreted as a valid URL.
+   */
   public func parse(_ urlString: String) throws -> ParsedURL {
     
     guard let components = URLComponents(string: urlString) else {
