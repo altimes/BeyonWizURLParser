@@ -77,11 +77,19 @@ final class BeyonWizURLParserTests: XCTestCase {
     XCTAssertEqual(RecordingFiletypes.cuts, filename!.filetype)
     filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.ts").recording
     XCTAssertEqual(RecordingFiletypes.ts, filename!.filetype)
-    // extension not in enum
     filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.freddy").recording
     XCTAssertEqual(nil, filename?.filetype)
     filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.srt").recording
     XCTAssertEqual(RecordingFiletypes.srt, filename?.filetype)
+    filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.ts.ap").recording
+    XCTAssertEqual(RecordingFiletypes.ap, filename?.filetype)
+    filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.ts.meta").recording
+    XCTAssertEqual(RecordingFiletypes.meta, filename?.filetype)
+    filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.eit").recording
+    XCTAssertEqual(RecordingFiletypes.eit, filename?.filetype)
+    filename = try! BeyonWizURLParser().parse("https://nas.local/TV/QI/20250828 1240 - QI - S06E05.ts.sc").recording
+    XCTAssertEqual(RecordingFiletypes.sc, filename?.filetype)
+
   }
   func testNameWithoutSuffix() throws {
     XCTAssertEqual(

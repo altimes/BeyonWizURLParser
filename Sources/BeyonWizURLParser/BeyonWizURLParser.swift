@@ -85,7 +85,7 @@ public enum BeyonWizURLParserError: Error, Sendable {
 /// BeyonWiz  files associated with a transport stream recording.
 ///
 /// Use ``match(for:)`` to determine the recording file type from a complete file
-/// name. When no known suffix is found, matching returns  nil.
+/// name. When no known suffix is found, matching returns  .unknown case..
 public enum RecordingFiletypes: String, Sendable, CaseIterable {
   case ts   = "ts"
   case eit  = "eit"
@@ -96,24 +96,32 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
   case srt  = "srt"
   case unknown = "unknown"
   
-  static func match(for fileName: String) -> RecordingFiletypes? {
-    for videoType in allCases {
-      // create Regex to match full string
-      let videoTypePattern = try! Regex("\\.\(videoType.rawValue)$")
-      do {
-        if let match = try videoTypePattern.firstMatch(in: fileName.lowercased()) {
-          print(videoType)
-          print(String(fileName[match.range]))
-          return videoType
-        }
-      }
-      catch {
-        // should log and better handle error....
-        print(error)
-        return nil
-      }
+  static func match(for fileName: String) -> RecordingFiletypes {
+    let result = RecordingFiletypes.allCases.filter { videoType in
+      Self.isFileOfType(fileName: fileName, for: videoType)
     }
-    return nil
+    return result.first ?? .unknown
+  }
+  
+  static func isFileOfType(fileName: String, for fileType: RecordingFiletypes) -> Bool {
+    let pattern = Regex {
+      "."
+      fileType.rawValue.lowercased()
+      Anchor.endOfLine
+    }
+    do {
+      if let match = try pattern.firstMatch(in: fileName.lowercased()) {
+//        print(fileType)
+//        print(String(fileName[match.range]))
+        return true
+      }
+      else { return false }
+    }
+    catch {
+      // should log and better handle error....
+      print(error)
+      return false
+    }
   }
 }
 
@@ -175,12 +183,14 @@ private extension BeyonWizURLParser {
   static func parseFile(from lastPathComponent: String?) -> RecordingMetadata? {
     
     guard let last = lastPathComponent else { return nil }
-    // must have a suffix of the known types
-    guard let fileExtension = RecordingFiletypes.match(for: last) else { return nil }
-    // find and remove suffix
-    let range = last.lowercased().range(of: ".\(fileExtension.rawValue)")
-    guard let dotIndex = range?.lowerBound else { return nil }
     
+    // must have a suffix of the known types
+    let fileType = RecordingFiletypes.match(for: last)
+    guard fileType != .unknown else { return nil }
+    
+    // find and remove suffix
+    let range = last.lowercased().range(of: ".\(fileType.rawValue)")
+    guard let dotIndex = range?.lowerBound else { return nil }
     let fileNameWithoutExtension = String(last[..<dotIndex])
     
     var parts = fileNameWithoutExtension
@@ -228,7 +238,7 @@ private extension BeyonWizURLParser {
       programName: programName,
       episodeInfo: episodeInfo,
       filenameWithoutSuffix: fileNameWithoutExtension,
-      filetype: fileExtension
+      filetype: fileType
     )
   }
   
