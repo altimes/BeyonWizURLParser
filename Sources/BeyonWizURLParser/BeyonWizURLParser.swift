@@ -87,7 +87,6 @@ public enum BeyonWizURLParserError: Error, Sendable {
   case invalidURL
 }
 
-
 // MARK: - File Types
 
 /// File types recognised in BeyonWiz recording-related file names.
@@ -104,19 +103,14 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
   /// Event Information Table extracted from Transport Stream
   case eit  = "eit"
   /// BeyonWiz "cuts" file that contains information marking start, end and bookmarks
-  ///  - more info ...
   case cuts = "ts.cuts"
   /// BeyonWiz meta data that identifies recording
-  ///  - more info ...
   case meta = "ts.meta"
   /// BeyonWiz Access Poinst data to support fast playback by storing file offset of GOPs in "ts" file
-  ///  - more info ...
   case ap   = "ts.ap"
   /// BeyonWiz "structure cache" file
-  ///  - more info ...
   case sc   = "ts.sc"
   /// Subtitle file extracted from "ts" file using ccextractor
-  ///  - more info ...
   case srt  = "srt"
   /// Default type for unmatched extension
   case unknown = "unknown"
@@ -164,7 +158,6 @@ public enum RecordingFiletypes: String, Sendable, CaseIterable {
 }
 
 // MARK: - Parser
-
 
 /**
  A text field driven  parser for BeyonWiz recording URLs.
@@ -267,10 +260,9 @@ private extension BeyonWizURLParser {
       }
       .filter { !$0.isEmpty }
     
-    
     guard !parts.isEmpty else { return nil }
     
-    // 1️⃣ Detect episode (must be last if present)
+    //  Detect episode (must be last if present)
     var episodeInfo: EpisodeInfo? = nil
     if let lastPart = parts.last,
        let episode = parseEpisode(from: lastPart) {
@@ -278,7 +270,7 @@ private extension BeyonWizURLParser {
       parts.removeLast()
     }
     
-    // 2️⃣ Detect date/time (must be first if present)
+    //  Detect date/time (must be first if present)
     
     var dateTime: Date? = nil
     if let firstPart = parts.first,
@@ -287,14 +279,14 @@ private extension BeyonWizURLParser {
       parts.removeFirst()
     }
     
-    // 3️⃣ Detect channel (if 2 parts remain, first is channel)
+    //  Detect channel (if 2 parts remain, first is channel)
     var channelName: String? = nil
     
     if parts.count >= 2 {
       channelName = parts.removeFirst()
     }
     
-    // 4️⃣ Remaining is program name (mandatory)
+    //  Remaining is program name (mandatory)
     guard let programName = parts.first else {
       return nil
     }
@@ -368,4 +360,3 @@ private extension BeyonWizURLParser {
     return date
   }
 }
-
