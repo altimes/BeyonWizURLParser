@@ -1,12 +1,13 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
-// Built by a combination dialog with ChatGPT and manual coding
+// Built by a intial build by dialog with ChatGPT and then manual coding
 // Used ChatGPT to do the package setup and write the repetetive
 // framework coding given a syntactical description of the filename format.
 //
-// Consequently has some fields that BeyonWiz does not have (query, port, user, password etc..)
-// Left on the "you never know when you might encounter it, and it can do no harm" basis
+// ChatGPT created some properties that BeyonWiz does not generally use
+// (query, port, user, password etc..)
+// Left in the code on the "you never know when you might encounter it, and it can do no harm" basis
 
 
 import Foundation
